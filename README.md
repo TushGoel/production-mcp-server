@@ -7,7 +7,7 @@
 
 A production-grade MCP (Model Context Protocol) server demonstrating how to safely expose tools to AI agents in enterprise environments.
 
-Built for AI agents operating on infrastructure serving **500,000+ end customers** and processing millions of assets in a large-scale migration. At this scale, an ungoverned agent making a wrong tool call isn't a dev environment incident — it's a customer-facing outage.
+Built for AI agents operating on infrastructure serving a large multi-tenant customer base and processing a large volume of assets in an ongoing migration. At this scale, an ungoverned agent making a wrong tool call isn't a dev environment incident — it's a customer-facing outage.
 
 Most MCP examples show how to *connect* tools to agents. This repo shows how to do it *safely at scale* — with permission enforcement, behavioral guardrails, blast-radius controls, and structured audit trails on every invocation.
 
@@ -373,6 +373,6 @@ This repo is one piece of a production AI agent infrastructure portfolio:
 
 | Repo | What It Is |
 |------|-----------|
-| **[agentic-ops](https://github.com/TushGoel/agentic-ops)** | Full system design: how these pieces fit together in a production deployment that eliminated 95% of manual oncall triage |
+| **[agentic-ops](https://github.com/TushGoel/agentic-ops)** | Full system design: how these pieces fit together in a production deployment that significantly cut manual oncall triage |
 | **[production-mcp-server](https://github.com/TushGoel/production-mcp-server)** | ← You are here: the MCP governance layer |
 | **[agent-eval-framework](https://github.com/TushGoel/agent-eval-framework)** | How agent quality is measured and regressions caught before they ship |

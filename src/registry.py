@@ -19,7 +19,14 @@ class ToolDefinition:
     handler: Callable[..., Any]
     required_permissions: set[str] = field(default_factory=set)
     risk_level: RiskLevel = RiskLevel.LOW
-    requires_confirmation: bool = False  # blast-radius guard for HIGH risk tools
+    requires_confirmation: bool = False  # additionally require confirmation for non-HIGH tools
+
+    def __post_init__(self) -> None:
+        # HIGH risk always requires confirmation — not opt-in, not something a
+        # caller can forget to set. This is what makes the blast-radius
+        # guarantee an invariant rather than a convention.
+        if self.risk_level == RiskLevel.HIGH:
+            self.requires_confirmation = True
 
 
 # Module-level default registry — used by @mcp_tool decorator

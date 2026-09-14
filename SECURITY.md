@@ -28,10 +28,11 @@ CALLER_PERMISSIONS = {"deployments:read", "metrics:read", "database:read"}
 ```
 
 ### Defense in Depth
-Three independent layers between an agent request and tool execution:
+Four independent layers between an agent request and tool execution:
 1. Permission check (authorization)
-2. Blast-radius guard (risk classification)
+2. Blast-radius guard (risk classification — enforced automatically for HIGH risk tools, not opt-in)
 3. Input validation (injection prevention)
+4. Execution timeout (bounds how long a handler can run)
 
 Any single layer failing does not bypass the others.
 
@@ -51,7 +52,7 @@ This pattern supports compliance requirements in environments governed by:
 - **SOC 2 Type II** — complete audit trail of every privileged action
 - **ISO 27001** — access control, least privilege, audit logging
 - **GDPR / CCPA** — tool results are truncated to 500 chars before logging; arguments are logged in full, so PII/credentials must never be passed as tool arguments
-- **NIST AI RMF** — risk classification per tool (LOW/MEDIUM/HIGH), human confirmation for HIGH-risk actions
+- **NIST AI RMF** — risk classification per tool (LOW/MEDIUM/HIGH), mandatory confirmation gate for HIGH-risk actions (see README's Human-in-the-loop section for what `confirmed=True` does and does not guarantee)
 
 ## Reporting Security Issues
 

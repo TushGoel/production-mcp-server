@@ -185,7 +185,7 @@ production-mcp-server/
 ├── src/
 │   ├── server.py          # MCP server entry point — tool registration + FastMCP wiring
 │   ├── registry.py        # Tool registry — metadata, permissions, risk classification
-│   ├── guardrails.py      # Guardrail layer — 3-layer enforcement on every invocation
+│   ├── guardrails.py      # Guardrail layer — 4-layer enforcement on every invocation
 │   ├── audit.py           # Structured audit trail — append-only event log
 │   └── tools/
 │       └── example_tools.py  # Example handlers — swap with your real data sources
@@ -261,15 +261,17 @@ def get_caller_context(session) -> tuple[str, set[str]]:
 
 ## Design Decisions & Trade-offs
 
-### 1. Why 3 layers — and why in this specific order
+### 1. Why 4 layers — and why in this specific order
 
-The guardrail layers run in this exact sequence: **permission check → blast-radius guard → argument validation**. The order is not arbitrary.
+The guardrail layers run in this exact sequence: **permission check → blast-radius guard → argument validation → execution timeout**. The order is not arbitrary.
 
 **Permission check first:** This is an O(1) set intersection. If the caller doesn't hold the required permission, reject immediately — before processing the arguments at all. Cheap, definitive, no wasted work.
 
-**Blast-radius guard second:** If the operation is HIGH risk and unconfirmed, reject before any argument parsing. The blast-radius check doesn't need to know what the arguments say — it only needs the risk level registered on the tool definition.
+**Blast-radius guard second:** If the operation is HIGH risk and unconfirmed, reject before any argument parsing. `ToolDefinition.__post_init__` forces `requires_confirmation=True` whenever `risk_level` is HIGH, so this isn't a flag a caller can forget to set — it's enforced at construction time.
 
-**Argument validation last:** Pattern matching and input parsing are the most expensive operations. They only run on requests that have already passed the authorization checks. Running them first would process potentially adversarial input before deciding whether the caller is even permitted.
+**Argument validation third:** Pattern matching and input parsing are the most expensive of the pre-execution checks. They only run on requests that have already passed the authorization checks. Running them first would process potentially adversarial input before deciding whether the caller is even permitted.
+
+**Execution timeout last:** Once a call is authorized and validated, it still needs a bound on how long it can run — a hung handler shouldn't hang the caller indefinitely. This layer wraps the actual handler invocation; the timeout thread is not killed on expiry (Python has no safe way to do that), so a handler that ignores the timeout keeps running in the background — the caller gets its error back, the process doesn't leak indefinitely for tools that respect cancellation.
 
 **Inverting this order** (validate args first, check permissions last) means you're parsing `../../etc/passwd` before you've determined whether the caller can even call the tool. Defense-in-depth requires that the cheapest, most definitive checks run first.
 
@@ -347,7 +349,7 @@ The guardrail, audit, and registry layers here are application-level logic on to
 
 The most important principle in this system: **the agent never takes an irreversible action without an explicit confirmation gate.** This is not implemented as a prompt instruction ("please ask before deleting"). It's enforced at the infrastructure layer — the MCP gateway will not execute a HIGH-risk, irreversible operation without `confirmed=True`. This reference implementation gates on that flag; wiring `confirmed` to an actual human-approval step (a separate identity/session check, not just a caller-supplied boolean) is the integration work a production deployment still needs to do.
 
-Why this matters: LLMs can be confidently wrong. A well-designed agentic system doesn't trust the model's judgment on irreversible actions — it routes them through human approval unconditionally. The blast-radius guard is the infrastructure enforcement of this principle.
+Why this matters: LLMs can be confidently wrong. A well-designed agentic system doesn't trust the model's judgment on irreversible actions — it requires an explicit confirmation gate before proceeding. The blast-radius guard is the infrastructure enforcement of this principle; whether that gate is actually backed by a human, and not just another automated caller passing `confirmed=True`, is the integration work noted above.
 
 **What "irreversible" means in practice:**
 - Production rollbacks affecting more than N deployments

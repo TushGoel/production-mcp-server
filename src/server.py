@@ -102,5 +102,23 @@ def database_query(query: str, database: str = "readonly_replica") -> list:
     )
 
 
+@mcp.tool()
+def rollback_deployment(deployment_id: str, reason: str, confirmed: bool = False) -> dict:
+    """Initiate a deployment rollback. HIGH risk — requires confirmed=True.
+
+    Note: CALLER_PERMISSIONS above intentionally excludes deployments:write
+    and deployments:rollback, so this oncall-agent identity is denied at the
+    permission layer regardless of `confirmed`. The endpoint is real and
+    reachable via MCP; this example caller just isn't authorized to use it.
+    """
+    return guardrails.invoke(
+        tool_name="trigger_rollback",
+        arguments={"deployment_id": deployment_id, "reason": reason},
+        caller_id=CALLER_ID,
+        caller_permissions=CALLER_PERMISSIONS,
+        confirmed=confirmed,
+    )
+
+
 if __name__ == "__main__":
     mcp.run()

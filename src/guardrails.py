@@ -57,7 +57,6 @@ class Guardrails:
         confirmed: bool = False,
         timeout_seconds: Optional[float] = None,
     ) -> Any:
-        tool = self._registry.get(tool_name)
         start = time.monotonic()
         event = AuditEvent(
             tool_name=tool_name,
@@ -66,6 +65,8 @@ class Guardrails:
         )
 
         try:
+            tool = self._registry.get(tool_name)
+
             # Layer 1: permission enforcement
             missing = tool.required_permissions - caller_permissions
             if missing:
@@ -76,7 +77,10 @@ class Guardrails:
                 )
 
             # Layer 2: blast-radius guard for HIGH risk tools
-            if tool.risk_level == RiskLevel.HIGH and tool.requires_confirmation and not confirmed:
+            # (ToolDefinition.__post_init__ forces requires_confirmation=True
+            # whenever risk_level is HIGH, so this is an invariant, not a
+            # convention a caller could forget to set)
+            if tool.requires_confirmation and not confirmed:
                 event.permitted = False
                 event.error = "HIGH risk tool requires confirmed=True"
                 raise GuardrailViolationError(
@@ -93,6 +97,10 @@ class Guardrails:
             return result
 
         except (PermissionDeniedError, GuardrailViolationError, ToolTimeoutError):
+            raise
+        except KeyError:
+            event.permitted = False
+            event.error = f"Unknown tool: {tool_name}"
             raise
         except Exception as exc:
             event.error = str(exc)

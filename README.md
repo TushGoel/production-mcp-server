@@ -345,7 +345,7 @@ The guardrail, audit, and registry layers here are application-level logic on to
 
 ### 6. Human-in-the-loop is a design constraint, not a feature flag
 
-The most important principle in this system: **the agent NEVER takes an irreversible action without explicit human confirmation.** This is not implemented as a prompt instruction ("please ask before deleting"). It's enforced at the infrastructure layer — the MCP gateway physically cannot execute a HIGH-risk, irreversible operation without `confirmed=True`.
+The most important principle in this system: **the agent never takes an irreversible action without an explicit confirmation gate.** This is not implemented as a prompt instruction ("please ask before deleting"). It's enforced at the infrastructure layer — the MCP gateway will not execute a HIGH-risk, irreversible operation without `confirmed=True`. This reference implementation gates on that flag; wiring `confirmed` to an actual human-approval step (a separate identity/session check, not just a caller-supplied boolean) is the integration work a production deployment still needs to do.
 
 Why this matters: LLMs can be confidently wrong. A well-designed agentic system doesn't trust the model's judgment on irreversible actions — it routes them through human approval unconditionally. The blast-radius guard is the infrastructure enforcement of this principle.
 

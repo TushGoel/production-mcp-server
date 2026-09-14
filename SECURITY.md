@@ -10,11 +10,11 @@ When AI agents gain tool access, the primary threats are:
 |--------|---------|-----------|
 | **Privilege escalation** | Agent calls a tool it isn't authorized for | Permission enforcement layer — every call checked before execution |
 | **Blast-radius explosion** | Agent triggers a rollback affecting 50 services instead of 1 | HIGH risk tools require `confirmed=True` — cannot be called accidentally |
-| **Prompt injection via tools** | Malicious data in a tool response tricks the agent | Output validation + bounded tool results (truncated to 500 chars in audit) |
+| **Prompt injection via tools** | Malicious data in a tool response tricks the agent | Tool results truncated to 500 chars before logging; output validation against injected content is not yet implemented |
 | **Path traversal** | Agent passes `../../etc/passwd` to a file-reading tool | Input validation layer blocks traversal patterns before handler runs |
 | **SQL injection** | Agent constructs a destructive query | Destructive SQL pattern detection (`DROP TABLE`, `DELETE FROM`, `TRUNCATE`) |
 | **Replay attacks** | Old audit events used to reconstruct agent behavior | Timestamps and immutable append-only audit trail |
-| **Credential exposure** | Agent inadvertently logs secrets | Arguments truncated in audit trail; credentials never passed as tool args |
+| **Credential exposure** | Agent inadvertently logs secrets | Audit trail logs full tool arguments, untruncated — callers must never pass credentials as tool arguments |
 
 ## Design Principles Applied
 
@@ -50,7 +50,7 @@ This pattern supports compliance requirements in environments governed by:
 
 - **SOC 2 Type II** — complete audit trail of every privileged action
 - **ISO 27001** — access control, least privilege, audit logging
-- **GDPR / CCPA** — PII never logged in tool arguments (truncated at 500 chars)
+- **GDPR / CCPA** — tool results are truncated to 500 chars before logging; arguments are logged in full, so PII/credentials must never be passed as tool arguments
 - **NIST AI RMF** — risk classification per tool (LOW/MEDIUM/HIGH), human confirmation for HIGH-risk actions
 
 ## Reporting Security Issues
